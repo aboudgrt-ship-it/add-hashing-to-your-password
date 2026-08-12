@@ -1,42 +1,40 @@
-import hashlib 
-import secrets 
-import base64 
-import hmac 
-#first we will create a function to generate a password hash using PBKDF2 with SHA-256. This function will take a password as input, generate a random salt, and return the hashed password in a specific format.
+import hashlib
+import secrets
+import base64
+import hmac
 
-def generate_password_hash(password: str) -> str: 
+# Function to generate a password hash using PBKDF2 with SHA-256
+
+def generate_password_hash(password: str, iterations: int = 200_000) -> str:
     salt = secrets.token_bytes(16)
     password_bytes = password.encode('utf-8')
-    key = hashlib.pbkdf2_hmac('sha256' , password_bytes , salt , 200_000 , dklen=32)
-    salt_664 = base64.urlsafe_b64encode(salt).decode('utf-8')
-    key_664 = base64.urlsafe_b64encode(key).decode('utf-8')
-    return f"200_000${salt_664}${key_664}"
+    key = hashlib.pbkdf2_hmac('sha256', password_bytes, salt, iterations, dklen=32)
+    salt_b64 = base64.urlsafe_b64encode(salt).decode('utf-8')
+    key_b64 = base64.urlsafe_b64encode(key).decode('utf-8')
+    return f"{iterations}${salt_b64}${key_b64}"
 
-# Next, we will create a function to verify the password hash. This function will take the stored password hash and the input password, extract the salt and key from the stored hash, and compare the generated key with the expected key using a constant-time comparison to prevent timing attacks.
+#now create function to verify password hash
 
-def verify_password_hash(password: str) -> str:
+def verify_password_hash(stored_hash: str, password: str) -> bool:
     try:
-        iterations_str , salt_664 , key_664 = password.split('$')
+        iterations_str, salt_b64, expected_key_b64 = stored_hash.split('$')
         iterations = int(iterations_str)
-        salt = base64.urlsafe_b64decode(salt_664.encode('utf-8'))
-        expected_key = base64.urlsafe_b64decode(key_664.encode('utf-8'))
+        salt = base64.urlsafe_b64decode(salt_b64.encode('utf-8'))
+        expected_key = base64.urlsafe_b64decode(expected_key_b64.encode('utf-8'))
 
-# Generate the key from the input password and compare it with the expected key
+# we then compute the hash of the provided password using the same salt and iterations, and compare it to the expected key.
 
         password_bytes = password.encode('utf-8')
-        key = hashlib.pbkdf2_hmac('sha256' , password_bytes , salt , iterations , dklen=32)
-        return hmac.compare_digest(key , expected_key)
-    
-# If any error occurs during the verification process, we will catch the exception and return False to indicate that the password verification failed.
-
+        key = hashlib.pbkdf2_hmac('sha256', password_bytes, salt, iterations, dklen=32)
+        return hmac.compare_digest(key, expected_key)
     except Exception as e:
         print(f"Error verifying password hash: {e}")
         return False
-# Just for a little example 
+
+# simpl example
 password = "my_secure_password"
 stored = generate_password_hash(password)
 print(f"Stored password hash: {stored}")
-is_valid = verify_password_hash(stored)
+is_valid = verify_password_hash(stored, password)
 print(f"Password verification result: {is_valid}")
-
 # THANKS :p
